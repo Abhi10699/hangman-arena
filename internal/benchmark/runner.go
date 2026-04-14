@@ -12,20 +12,18 @@ type BenchmarkStats struct {
 }
 
 type BenchmarkRunner struct {
-	GameSession *game.HangmanGameSession
-	Player      player.Player
-	Word        string
-	TotalGames  int
+	Player     player.Player
+	WordSource Datasource
+	TotalGames int
 
 	Stats BenchmarkStats
 }
 
-func NewBenchmarkRunner(word string, totalGames int, p player.Player) *BenchmarkRunner {
+func NewBenchmarkRunner(word Datasource, totalGames int, p player.Player) *BenchmarkRunner {
 	return &BenchmarkRunner{
-		GameSession: game.NewSession(word),
-		Player:      p,
-		Word:        word,
-		TotalGames:  totalGames,
+		Player:     p,
+		WordSource: word,
+		TotalGames: totalGames,
 		Stats: BenchmarkStats{
 			Wins:   0,
 			Losses: 0,
@@ -37,10 +35,18 @@ func (runner *BenchmarkRunner) RunBenchmark() {
 	for gameIndex := range runner.TotalGames {
 
 		fmt.Println("Game: ", gameIndex)
-		gameSession := game.NewSession(runner.Word)
+
 		var attempts []AttemptLog
 
+		wordToGuess, err := runner.WordSource.GetNextWord()
+		if err != nil || len(wordToGuess) <= 1 {
+			fmt.Errorf("No valid words to test")
+			break
+		}
+
+		gameSession := game.NewSession(wordToGuess)
 		for {
+
 			if gameSession.IsGameOver() {
 				// check if the game ended in a win or loss
 				fmt.Println(gameSession.CurrentGuess)
@@ -54,7 +60,7 @@ func (runner *BenchmarkRunner) RunBenchmark() {
 				}
 
 				logData := GameLog{
-					Word:          runner.Word,
+					Word:          wordToGuess,
 					GameIndex:     gameIndex,
 					Result:        result,
 					TotalAttempts: len(attempts),
